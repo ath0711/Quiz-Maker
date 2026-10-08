@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quiz</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+/* Layout: an exam booklet. One text per page with its five questions; text and questions sit side by side on wide screens, stacked on phones. */
+:root {
+  --bg: #EEF1F6;
+  --surface: #FFFFFF;
+  --ink: #16213A;
+  --muted: #5B6680;
+  --line: #CBD2E0;
+  --accent: #2B4ACB;
+  --on-accent: #FFFFFF;
+  --pick: #E4E9FB;
+  --mark: #FFE27A;
+  --good: #1E7A4C;
+  --good-bg: #E2F3EA;
+  --bad: #B3372F;
+  --bad-bg: #FBE9E7;
+  --display: "Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --passage: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10151F; --surface: #19202E; --ink: #E8ECF5; --muted: #9AA5BD; --line: #303A4E;
+    --accent: #8FA6FF; --on-accent: #10151F; --pick: #232E4D; --mark: #5E4E10;
+    --good: #6FD3A0; --good-bg: #173527; --bad: #FF9A90; --bad-bg: #3A1D1B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10151F; --surface: #19202E; --ink: #E8ECF5; --muted: #9AA5BD; --line: #303A4E;
+  --accent: #8FA6FF; --on-accent: #10151F; --pick: #232E4D; --mark: #5E4E10;
+  --good: #6FD3A0; --good-bg: #173527; --bad: #FF9A90; --bad-bg: #3A1D1B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--body); font-size: 1.0625rem; line-height: 1.55;
+  padding-inline: 16px; padding-block: 24px 48px;
+}
+.sheet { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+.sheet.wide { max-width: 1120px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: 1.75rem; line-height: 1.1; margin: 0; text-wrap: balance; }
+h1 span { background: var(--mark); padding: 0 .2em; border-radius: 3px; }
+h2 { font-family: var(--display); font-weight: 800; font-size: 1.3rem; line-height: 1.2; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 1.1rem; margin: 0; }
+p { margin: 0; }
+.sub { color: var(--muted); font-size: .95rem; }
+.label { font-size: .78rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* start */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-weight: 700; }
+input[type="text"], textarea {
+  font: inherit; color: var(--ink); background: var(--bg);
+  border: 1.5px solid var(--line); border-radius: 8px; padding: 11px 12px; width: 100%;
+}
+ul.rules { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+.err { color: var(--bad); font-weight: 700; }
+
+/* test page */
+.status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; color: var(--muted); font-size: .92rem; font-variant-numeric: tabular-nums; }
+.work { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 900px) {
+  .work { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .work > .card.text { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); max-height: calc(100vh - 24px); overflow-y: auto; }
+}
+.text p.para { font-family: var(--passage); font-size: 1.1rem; line-height: 1.62; display: grid; grid-template-columns: 1.6em minmax(0, 1fr); }
+.text p.para .n { font-family: var(--body); font-size: .8rem; color: var(--muted); font-weight: 700; padding-top: .35em; }
+.qs { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.qhead { display: flex; gap: 10px; align-items: baseline; }
+.qnum { font-family: var(--display); font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; flex: none; }
+.stem { font-weight: 700; min-width: 0; }
+.how { color: var(--muted); font-size: .92rem; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left;
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer;
+}
+.opt .txt { min-width: 0; padding-top: 2px; }
+.bubble {
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  border: 1.5px solid var(--muted); display: grid; place-items: center;
+  font-family: var(--display); font-weight: 600; font-size: .9rem;
+}
+.multi .bubble { border-radius: 6px; }
+.opt:hover { border-color: var(--accent); }
+.opt[aria-pressed="true"] { border-color: var(--accent); background: var(--pick); }
+.opt[aria-pressed="true"] .bubble { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.catrow { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.catrow .s { font-family: var(--passage); font-size: 1.04rem; }
+.pair { display: flex; flex-wrap: wrap; gap: 8px; }
+.tog { font: inherit; font-size: .95rem; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.tog[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.nav { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+.btn {
+  font-family: var(--display); font-weight: 600; font-size: 1.05rem;
+  background: var(--accent); color: var(--on-accent); border: 1.5px solid var(--accent); border-radius: 8px;
+  padding: 12px 20px; cursor: pointer;
+}
+a.btn { text-decoration: none; display: inline-block; }
+details { display: flex; flex-direction: column; gap: 10px; }
+details[open] summary { margin-bottom: 10px; }
+summary { cursor: pointer; }
+details .nav { margin-top: 10px; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.linkbtn { font: inherit; font-size: .95rem; color: var(--accent); background: none; border: 0; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; align-self: flex-start; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* results */
+.score { font-family: var(--display); font-weight: 800; font-size: 3.2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.score small { font-size: 1.4rem; color: var(--muted); font-weight: 600; }
+.rows { display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 6px; font-variant-numeric: tabular-nums; }
+.send { background: var(--pick); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.send textarea { font-family: ui-monospace, "Cascadia Mono", Menlo, monospace; font-size: .85rem; line-height: 1.4; resize: none; background: var(--surface); }
+.item { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.item .q { font-weight: 700; }
+.tag { font-weight: 700; }
+.tag.ok { color: var(--good); }
+.tag.no { color: var(--bad); }
+.why { color: var(--muted); font-size: .98rem; }
+
+/* teacher */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { border: 1px solid var(--line); padding: 5px 8px; text-align: center; white-space: nowrap; }
+th.l, td.l { text-align: left; }
+td.y { background: var(--good-bg); color: var(--good); }
+td.x { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+footer { display: flex; justify-content: center; }
+</style>
+<style>
+body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+html, body { overscroll-behavior-y: contain; }
+body.lock .text, body.lock .qs { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding-block: 8px; display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; border-bottom: 1px solid var(--line); }
+#bar:empty { display: none; }
+#clockwrap { display: flex; gap: 10px; align-items: baseline; }
+#clock { font-family: var(--display); font-weight: 800; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+#clock.low { color: var(--bad); }
+#alert { color: var(--bad); font-weight: 700; font-size: .92rem; min-width: 0; flex: 1 1 220px; }
+#preview { background: var(--mark); color: var(--ink); border-radius: 8px; padding: 8px 12px; font-weight: 700; }
+#cover { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: grid; place-items: center; padding: 16px; overflow: auto; }
+#cover .card { max-width: 460px; }
+#cover-code { font: inherit; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 8px; padding: 11px 12px; width: 100%; }
+.work.solo { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .work > .card.text { top: 64px; max-height: calc(100vh - 80px); } }
+</style>
+</head>
+<body>
+<main class="sheet" id="sheet">
+  <header><span class="label" id="h-label"></span><h1 id="h-title"></h1></header>
+  <p id="preview" hidden>Preview. Nothing you do here is sent to your form.</p>
+  <div id="bar" hidden><span id="clockwrap"><span class="label">Time left</span><span id="clock"></span></span><span id="alert" role="alert" hidden></span></div>
+  <section id="stage"></section>
+</main>
+<div id="cover" role="alertdialog" aria-labelledby="cover-title" hidden><div class="card">
+  <h2 id="cover-title">The quiz is hidden</h2>
+  <p class="err" id="cover-msg"></p>
+  <p class="sub" id="cover-time"></p>
+  <div class="field" id="cover-lock" hidden><label for="cover-code">Teacher code</label><input type="password" id="cover-code" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  <div class="nav"><button type="button" class="btn" id="cover-btn">Continue the quiz</button></div>
+</div></div>
+<script type="application/json" id="c">{"id":"quiz-present-and-comparison1","title":"Quiz Present and Comparison1","label":"","minutes":6,"maxLeft":3,"unlock":"L26CB","showAnswers":true,"preview":false,"form":{"base":"https://docs.google.com/forms/d/e/1FAIpQLSeVcnKpCpRsKHHkJNInS_CpP3-O2Ol2ANAtpJ3r0q7DX_d22g/","name":"entry.1708684026","kelas":"entry.1313595527","score":"entry.708886806","note":"entry.2132529371"}}</script>
+<script type="text/plain" id="d">==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</script>
+<script>
+(function () {
+  var C = JSON.parse(document.getElementById("c").textContent);
+  var TEXTS = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(document.getElementById("d").textContent.split("").reverse().join("")), function (c) { return c.charCodeAt(0); })));
+  var COMP = { T: "Pemahaman tekstual", I: "Pemahaman inferensial", E: "Evaluasi dan apresiasi" };
+  var L = "ABCDEFGHIJ", PREFIX = C.id.toUpperCase(), LIMIT = (C.minutes || 0) * 60, MAXLEFT = C.maxLeft || 0;
+  var KEY = "quiz-" + C.id + (C.preview ? "-preview" : ""), F = C.form;
+  var QS = [];
+  TEXTS.forEach(function (t, ti) { t.qs.forEach(function (q) { q.text = ti; q.n = QS.length + 1; QS.push(q); }); });
+
+  /* ---------- scoring ---------- */
+  function blank(q) { return q.kind === "pg" ? null : q.kind === "multi" ? [] : q.items.map(function () { return null; }); }
+  function answered(q, a) {
+    if (q.kind === "pg") return a != null;
+    if (q.kind === "multi") return a.length === q.answer.length;
+    return a.every(function (v) { return v != null; });
+  }
+  function correct(q, a) {
+    if (q.kind === "pg") return a === q.answer;
+    if (q.kind === "multi") return a.slice().sort().join(",") === q.answer.slice().sort().join(",");
+    return q.items.every(function (it, i) { return a[i] === it.key; });
+  }
+  function token(q, a) {
+    if (q.kind === "pg") return a == null ? "-" : L[a];
+    if (q.kind === "multi") return a.length ? a.slice().sort().map(function (i) { return L[i]; }).join("") : "-";
+    return a.map(function (v) { return v == null ? "0" : String(v + 1); }).join("");
+  }
+  function untoken(q, t) {
+    if (q.kind === "pg") return t === "-" ? null : L.indexOf(t);
+    if (q.kind === "multi") return t === "-" ? [] : t.split("").map(function (c) { return L.indexOf(c); });
+    return t.split("").map(function (c) { return c === "0" ? null : Number(c) - 1; });
+  }
+  function code(s) {
+    var h = 2166136261, abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", out = "";
+    s += "|" + C.id + "-hrf";
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    for (var j = 0; j < 5; j++) { out += abc[h & 31]; h >>>= 5; }
+    return out;
+  }
+  function clean(s) { return String(s || "").replace(/[|\n\r]/g, " ").replace(/\s+/g, " ").trim(); }
+  function total(ans) { return QS.reduce(function (n, q, i) { return n + (correct(q, ans[i]) ? 1 : 0); }, 0); }
+  function line(name, kelas, attempt, ans) {
+    var toks = QS.map(function (q, i) { return token(q, ans[i]); }).join(".");
+    var n = clean(name), k = clean(kelas) || "-";
+    return PREFIX + " | " + n + " | " + k + " | " + total(ans) + "/" + QS.length + " | try " + attempt + " | " + toks + " | " + code([n, k, attempt, toks].join("|"));
+  }
+  function parse(blob) {
+    var re = new RegExp(PREFIX + " \\| ([^|\\n]+?) \\| ([^|\\n]+?) \\| (\\d{1,3})\\/\\d{1,3} \\| try (\\d+) \\| ([A-J0-9.\\-]+) \\| ([A-Z2-9]{5})", "g");
+    var m, out = [], seen = {};
+    while ((m = re.exec(blob))) {
+      if (seen[m[0]]) continue;
+      seen[m[0]] = 1;
+      var toks = m[5].split("."), okShape = toks.length === QS.length;
+      var marks = okShape ? QS.map(function (q, i) { return correct(q, untoken(q, toks[i])); }) : [];
+      var score = marks.filter(Boolean).length;
+      out.push({ name: m[1], kelas: m[2], attempt: Number(m[4]), score: score, marks: marks,
+        valid: okShape && code([m[1], m[2], m[4], m[5]].join("|")) === m[6] && score === Number(m[3]) });
+    }
+    return out;
+  }
+  window.QUIZ = { QS: QS, TEXTS: TEXTS };
+
+  /* ---------- page ---------- */
+  var stage = document.getElementById("stage"), sheet = document.getElementById("sheet"), bar = document.getElementById("bar");
+  var clock = document.getElementById("clock"), alertBox = document.getElementById("alert");
+  var state = fresh(1), ticker = null, awayAt = 0, blurAt = 0, lastLog = {};
+  document.title = C.title;
+  document.getElementById("h-label").textContent = C.label || "";
+  (function () {
+    var h = document.getElementById("h-title"), w = C.title.split(" "), s = document.createElement("span");
+    s.textContent = w.shift(); h.appendChild(s); h.appendChild(document.createTextNode(w.length ? " " + w.join(" ") : ""));
+  })();
+  document.getElementById("preview").hidden = !C.preview;
+  document.getElementById("clockwrap").hidden = !LIMIT;
+
+  function fresh(attempt) {
+    return { name: "", kelas: "", page: -1, attempt: attempt, ans: QS.map(blank), order: null,
+             startedAt: 0, endedAt: 0, timeUp: false, kicked: false, log: [], awayAt: 0, goneAt: 0, sent: 0 };
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (s && Array.isArray(s.ans) && s.ans.length === QS.length && Array.isArray(s.log)) state = s;
+    } catch (e) {}
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function button(cls, text, id, fn) {
+    var b = el("button", cls, text); b.type = "button"; b.id = id; b.addEventListener("click", fn); return b;
+  }
+  function shuffle(n) {
+    var a = []; for (var i = 0; i < n; i++) a.push(i);
+    for (var j = n - 1; j > 0; j--) { var k = Math.floor(Math.random() * (j + 1)), t = a[j]; a[j] = a[k]; a[k] = t; }
+    return a;
+  }
+  function makeOrder() {
+    var o = { t: shuffle(TEXTS.length), q: TEXTS.map(function (t) { return shuffle(t.qs.length); }), o: {} };
+    QS.forEach(function (q) { if (q.options) o.o[q.n] = shuffle(q.options.length); });
+    return o;
+  }
+  function seen() {
+    var out = [];
+    state.order.t.forEach(function (ti, pi) {
+      state.order.q[ti].forEach(function (qi) { out.push({ q: TEXTS[ti].qs[qi], page: pi, num: out.length + 1 }); });
+    });
+    return out;
+  }
+  function letter(q, orig) { return L[state.order.o[q.n].indexOf(orig)]; }
+  function inTest() { return typeof state.page === "number" && state.page >= 0 && state.page < TEXTS.length; }
+  function mmss(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + ("0" + (sec % 60)).slice(-2); }
+  function elapsed() { return (Date.now() - state.startedAt) / 1000; }
+
+  /* ---------- activity log ---------- */
+  var NAMES = { left: "left the quiz page (other tab or app, or minimised)", blur: "clicked outside the quiz window",
+    copy: "tried to copy text", menu: "opened the right-click menu", prtsc: "pressed the Print Screen key",
+    badcode: "typed a wrong teacher code", small: "made the quiz window small or split the screen", fsexit: "left fullscreen", reload: "reloaded or reopened the page", print: "tried to print the page" };
+  function log(kind, dur) {
+    if (!state.startedAt || state.endedAt) return;
+    var now = Date.now();
+    if (dur == null && lastLog[kind] && now - lastLog[kind] < 2000) return;
+    lastLog[kind] = now;
+    if (state.log.length < 80) state.log.push({ k: kind, at: Math.round(elapsed() - (dur || 0)), d: dur == null ? null : Math.round(dur) });
+    save();
+    if (kind === "reload") {
+      alertBox.textContent = "The page was reloaded. Your answers are saved and the clock kept running. This is recorded.";
+      alertBox.hidden = false;
+    }
+    if (kind === "left" || kind === "blur" || kind === "fsexit") {
+      var n = state.log.filter(function (e) { return e.k === "left"; }).length;
+      alertBox.textContent = "You " + NAMES[kind].split(" (")[0] + ". This is recorded and sent to your teacher." +
+        (MAXLEFT ? " Leaving the page " + MAXLEFT + " times ends the quiz: you have left " + n + " of " + MAXLEFT + "." : "");
+      alertBox.hidden = false;
+      if (MAXLEFT && kind === "left" && n >= MAXLEFT) { state.kicked = true; finish(); return; }
+      showCover(alertBox.textContent);
+    }
+    if (kind === "small") showCover("The quiz window is too small or the screen is split. This is recorded and sent to your teacher. Make the quiz full size to continue.");
+  }
+
+  /* ---------- cover: hides the quiz until the student is back properly ---------- */
+  var cover = document.getElementById("cover"), coverMsg = document.getElementById("cover-msg"), coverBtn = document.getElementById("cover-btn");
+  var smallNow = false, sizeTimer = null, everFull = false, coverCode = document.getElementById("cover-code");
+  coverCode.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); coverBtn.click(); } });
+  function isSmall() {
+    var sw = screen.availWidth || screen.width, sh = screen.availHeight || screen.height;
+    if (!sw || !sh) return false;
+    var w = window.outerWidth || window.innerWidth, h = window.outerHeight || window.innerHeight;
+    if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) {
+      var lng = Math.max(sw, sh), sht = Math.min(sw, sh), land = w > h;
+      return w < 0.8 * (land ? lng : sht) || h < 0.6 * (land ? sht : lng);
+    }
+    return w < 0.8 * sw || h < 0.6 * sh;
+  }
+  function showCover(msg) {
+    if (!inTest()) return;
+    coverMsg.textContent = msg; cover.hidden = false;
+    document.getElementById("cover-lock").hidden = !C.unlock;
+    document.getElementById("cover-time").textContent = LIMIT ? "The clock is still running." : "";
+  }
+  function checkSize() {
+    if (!inTest()) { smallNow = false; return; }
+    var sm = isSmall();
+    if (sm && !smallNow) { smallNow = true; log("small"); }
+    else if (!sm) smallNow = false;
+  }
+  window.addEventListener("resize", function () { clearTimeout(sizeTimer); sizeTimer = setTimeout(checkSize, 500); });
+  coverBtn.addEventListener("click", function () {
+    if (isSmall()) { coverMsg.textContent = "The quiz window is still too small. Make it full size (maximise the window and close any split screen), then press Continue."; return; }
+    if (!document.hasFocus()) return;
+    if (C.unlock) {
+      var typed = coverCode.value.trim().toLowerCase();
+      if (!typed) { coverMsg.textContent = "Ask your teacher to type the code, then press Continue."; coverCode.focus(); return; }
+      if (code("unlock|" + typed) !== C.unlock) {
+        lastLog.badcode = 0; log("badcode"); coverCode.value = "";
+        coverMsg.textContent = "Wrong code. Only your teacher can continue the quiz. This attempt is recorded."; coverCode.focus(); return;
+      }
+      coverCode.value = "";
+    }
+    cover.hidden = true; smallNow = false;
+    if (everFull && !document.fullscreenElement) {
+      try { var p = document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    }
+  });
+  function noop() {}
+  function notes() {
+    var parts = [C.title, "try " + state.attempt, "time used " + mmss(((state.endedAt || Date.now()) - state.startedAt) / 1000) +
+      (state.timeUp ? " (time ran out)" : "") + (state.kicked ? " (AUTO-SUBMITTED after leaving " + MAXLEFT + " times)" : "")];
+    var any = false;
+    Object.keys(NAMES).forEach(function (k) {
+      var ev = state.log.filter(function (e) { return e.k === k; });
+      if (!ev.length) return;
+      any = true;
+      var s = NAMES[k] + " " + ev.length + "x";
+      if (k === "left" || k === "blur") {
+        var tot = ev.reduce(function (n, e) { return n + (e.d || 0); }, 0);
+        s += ", total " + tot + "s: " + ev.slice(0, 12).map(function (e) { return "at " + mmss(e.at) + " for " + (e.d || 0) + "s"; }).join("; ");
+      }
+      parts.push(s);
+    });
+    if (!any) parts.push("nothing suspicious recorded");
+    return parts.join(" | ") + " || " + line(state.name, state.kelas, state.attempt, state.ans);
+  }
+  /* a reload (for example pull-to-refresh on a tablet) is not the same as leaving */
+  var unloading = false;
+  function leaving() { unloading = true; if (inTest()) { state.awayAt = 0; awayAt = 0; state.goneAt = Date.now(); save(); } }
+  window.addEventListener("beforeunload", leaving);
+  window.addEventListener("pagehide", leaving);
+  window.addEventListener("pageshow", function (e) { unloading = false; if (e.persisted) comeBack(); });
+  function comeBack() {
+    if (!inTest()) return;
+    var now = Date.now();
+    if (state.awayAt) { var d = (now - state.awayAt) / 1000; state.awayAt = 0; log("left", d); }
+    else if (state.goneAt) { var gap = (now - state.goneAt) / 1000; state.goneAt = 0; if (gap > 8) log("left", gap); else log("reload"); }
+    else log("reload");
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (!inTest()) return;
+    if (document.visibilityState === "visible") unloading = false;
+    else if (unloading) return;
+    if (document.visibilityState === "hidden") { awayAt = Date.now(); blurAt = 0; state.awayAt = awayAt; save(); }
+    else if (awayAt) { var d = (Date.now() - awayAt) / 1000; awayAt = 0; state.awayAt = 0; log("left", d); }
+  });
+  window.addEventListener("blur", function () {
+    if (!inTest()) return;
+    setTimeout(function () {
+      if (inTest() && document.visibilityState === "visible" && !document.hasFocus() && !blurAt) {
+        blurAt = Date.now();
+        showCover("You clicked outside the quiz window. This is recorded and sent to your teacher.");
+      }
+    }, 400);
+  });
+  window.addEventListener("focus", function () {
+    if (blurAt) { var d = (Date.now() - blurAt) / 1000; blurAt = 0; if (inTest()) log("blur", d); }
+  });
+  ["copy", "cut"].forEach(function (t) {
+    document.addEventListener(t, function (e) { if (inTest()) { e.preventDefault(); log("copy"); } });
+  });
+  document.addEventListener("contextmenu", function (e) { if (inTest()) { e.preventDefault(); log("menu"); } });
+  document.addEventListener("dragstart", function (e) { if (inTest()) e.preventDefault(); });
+  document.addEventListener("keyup", function (e) { if (inTest() && e.key === "PrintScreen") log("prtsc"); });
+  window.addEventListener("beforeprint", function () { if (inTest()) log("print"); });
+  var wasFull = false;
+  document.addEventListener("fullscreenchange", function () {
+    if (document.fullscreenElement) { wasFull = true; everFull = true; }
+    else if (wasFull && inTest()) { wasFull = false; log("fsexit"); }
+  });
+
+  /* ---------- timer and navigation ---------- */
+  function tick() {
+    if (!inTest() || !LIMIT) return;
+    var left = LIMIT - elapsed();
+    clock.textContent = mmss(left);
+    clock.classList.toggle("low", left < 300);
+    if (left <= 0) { state.timeUp = true; finish(); }
+  }
+  function finish() {
+    if (!state.endedAt) state.endedAt = Date.now();
+    try { if (document.fullscreenElement) { wasFull = false; document.exitFullscreen(); } } catch (e) {}
+    go(TEXTS.length);
+  }
+  function go(page) { state.page = page; save(); render(); window.scrollTo(0, 0); }
+  function render() {
+    stage.textContent = "";
+    var test = inTest();
+    sheet.classList.toggle("wide", test && TEXTS[state.order.t[state.page]].paras.length > 0);
+    document.body.classList.toggle("lock", test);
+    bar.hidden = !test;
+    if (!test) cover.hidden = true;
+    if (ticker) { clearInterval(ticker); ticker = null; }
+    if (state.page === "teacher") return teacher();
+    if (state.page < 0) return start();
+    if (!test) return result();
+    ticker = setInterval(tick, 1000); tick();
+    if (inTest()) { testPage(state.page); clearTimeout(sizeTimer); sizeTimer = setTimeout(checkSize, 800); }
+  }
+
+  /* ---------- start ---------- */
+  function start() {
+    var card = el("form", "card"); card.noValidate = true;
+    card.appendChild(el("h2", null, "Before you start"));
+    var f1 = el("div", "field"), l1 = el("label", null, "Full name"), i1 = el("input");
+    l1.htmlFor = "student-name"; i1.type = "text"; i1.id = "student-name"; i1.value = state.name; i1.maxLength = 60;
+    f1.appendChild(l1); f1.appendChild(i1);
+    var f2 = el("div", "field"), l2 = el("label", null, "Class"), i2 = el("input");
+    l2.htmlFor = "student-class"; i2.type = "text"; i2.id = "student-class"; i2.value = state.kelas; i2.maxLength = 20;
+    i2.placeholder = "e.g. XII-2";
+    f2.appendChild(l2); f2.appendChild(i2);
+    card.appendChild(f1); card.appendChild(f2);
+    var kinds = {}; QS.forEach(function (q) { kinds[q.kind] = 1; });
+    var rules = el("ul", "rules"), list = [];
+    list.push(QS.length + " questions in " + TEXTS.length + " part" + (TEXTS.length > 1 ? "s" : "") + ". Your question order is different from your friends' order.");
+    if (LIMIT) list.push("You have " + C.minutes + " minutes. The clock starts when you press Start and does not stop. When it reaches zero, your answers are sent as they are.");
+    list.push("Stay on this page. Opening another tab or app, minimising the browser, copying text and similar actions are recorded and sent to your teacher with your score.");
+    if (MAXLEFT) list.push("If you leave the page " + MAXLEFT + " times, the quiz ends immediately and your answers are sent as they are. Turn on Do Not Disturb and close other apps before you start.");
+    if (kinds.multi || kinds.cat) list.push("Some questions ask for more than one answer or ask you to label several statements. All parts must be right to score the point.");
+    list.push("Your score is sent to your teacher automatically when you finish.");
+    list.forEach(function (t) { rules.appendChild(el("li", null, t)); });
+    card.appendChild(rules);
+    var err = el("p", "err"); err.hidden = true; card.appendChild(err);
+    var b = el("button", "btn", LIMIT ? "Start the " + C.minutes + " minutes" : "Start"); b.type = "submit"; b.id = "start-btn";
+    var nav = el("div", "nav"); nav.appendChild(b); card.appendChild(nav);
+    card.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var n = i1.value.trim();
+      if (n.length < 2) { err.textContent = "Type your full name first."; err.hidden = false; i1.focus(); return; }
+      state.name = n; state.kelas = i2.value.trim();
+      state.order = makeOrder(); state.startedAt = Date.now();
+      alertBox.hidden = true;
+      try { var p = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(function () {}); } catch (x) {}
+      go(0);
+    });
+    stage.appendChild(card);
+  }
+
+  /* ---------- one part ---------- */
+  function testPage(pi) {
+    var ti = state.order.t[pi], t = TEXTS[ti], all = seen();
+    var mine = all.filter(function (s) { return s.page === pi; });
+    var status = el("div", "status");
+    var s1 = el("span", null, "Part " + (pi + 1) + " of " + TEXTS.length), s2 = el("span");
+    function count() {
+      s2.textContent = QS.filter(function (q, i) { return answered(q, state.ans[i]); }).length + " of " + QS.length + " answered";
+    }
+    count();
+    status.appendChild(s1); status.appendChild(s2); stage.appendChild(status);
+    var work = el("div", "work" + (t.paras.length ? "" : " solo"));
+    if (t.paras.length || t.title) {
+      var text = el("article", "card text");
+      text.appendChild(el("span", "label", "Part " + (pi + 1) + (t.type ? " · " + t.type : "")));
+      if (t.title) text.appendChild(el("h2", null, t.title));
+      t.paras.forEach(function (p, i) {
+        var para = el("p", "para");
+        para.appendChild(el("span", "n", String(i + 1))); para.appendChild(el("span", null, p));
+        text.appendChild(para);
+      });
+      work.appendChild(text);
+    }
+    var qs = el("div", "qs");
+    mine.forEach(function (s) { qs.appendChild(question(s.q, s.num, count)); });
+    var warn = el("p", "err"); warn.hidden = true; warn.id = "warn"; qs.appendChild(warn);
+    var nav = el("div", "nav"), last = pi === TEXTS.length - 1, armed = false;
+    if (pi > 0) nav.appendChild(button("btn ghost", "Previous part", "back-btn", function () { go(pi - 1); }));
+    else nav.appendChild(el("span"));
+    nav.appendChild(button("btn", last ? "Finish and send my score" : "Next part", "next-btn", function () {
+      if (!last) return go(pi + 1);
+      var missing = all.filter(function (s) { return !answered(s.q, state.ans[s.q.n - 1]); }).map(function (s) { return s.num; });
+      if (missing.length && !armed) {
+        armed = true;
+        warn.textContent = "Not answered yet: number " + missing.join(", ") + ". Go back to answer, or press Finish again to send as it is.";
+        warn.hidden = false; return;
+      }
+      finish();
+    }));
+    qs.appendChild(nav); work.appendChild(qs); stage.appendChild(work);
+  }
+  function question(q, num, count) {
+    var i = q.n - 1, card = el("section", "card"), head = el("div", "qhead");
+    head.appendChild(el("span", "qnum", num + ".")); head.appendChild(el("p", "stem", q.stem));
+    card.appendChild(head);
+    function changed() { save(); count(); }
+    if (q.kind === "cat") {
+      card.appendChild(el("p", "how", "Choose one label for each statement."));
+      q.items.forEach(function (it, si) {
+        var row = el("div", "catrow"); row.appendChild(el("p", "s", it.s));
+        var pair = el("div", "pair");
+        var togs = q.labels.map(function (lab, li) {
+          var b = button("tog", lab, "q" + num + "-s" + si + "-" + li, function () {
+            state.ans[i][si] = li;
+            togs.forEach(function (x, xi) { x.setAttribute("aria-pressed", String(xi === li)); });
+            changed();
+          });
+          b.setAttribute("aria-pressed", String(state.ans[i][si] === li));
+          pair.appendChild(b); return b;
+        });
+        row.appendChild(pair); card.appendChild(row);
+      });
+      return card;
+    }
+    var multi = q.kind === "multi", perm = state.order.o[q.n];
+    if (multi) card.appendChild(el("p", "how", "Choose " + q.answer.length + " answers."));
+    var opts = el("div", "options" + (multi ? " multi" : ""));
+    var buttons = perm.map(function (orig, pos) {
+      var b = button("opt", null, "q" + num + "-o" + pos, function () {
+        if (multi) {
+          var a = state.ans[i], at = a.indexOf(orig);
+          if (at >= 0) a.splice(at, 1); else { a.push(orig); if (a.length > q.answer.length) a.shift(); }
+        } else state.ans[i] = state.ans[i] === orig ? null : orig;
+        paint(); changed();
+      });
+      b.appendChild(el("span", "bubble", L[pos])); b.appendChild(el("span", "txt", q.options[orig]));
+      opts.appendChild(b); return b;
+    });
+    function paint() {
+      buttons.forEach(function (b, pos) {
+        var orig = perm[pos], on = multi ? state.ans[i].indexOf(orig) >= 0 : state.ans[i] === orig;
+        b.setAttribute("aria-pressed", String(on));
+      });
+    }
+    paint(); card.appendChild(opts);
+    return card;
+  }
+
+  /* ---------- result ---------- */
+  function show(q, a) {
+    if (q.kind === "pg") return a == null ? "No answer" : letter(q, a) + ". " + q.options[a];
+    if (q.kind === "multi") return a.length ? a.map(function (x) { return letter(q, x); }).sort().join(" and ") : "No answer";
+    return a.map(function (v, k) { return (k + 1) + ": " + (v == null ? "no answer" : q.labels[v]); }).join("  ·  ");
+  }
+  function key(q) { return q.kind === "cat" ? q.items.map(function (it) { return it.key; }) : q.answer; }
+  function send(score) {
+    if (C.preview || !F || state.sent === state.attempt) return;
+    state.sent = state.attempt; save();
+    try {
+      var body = new URLSearchParams();
+      body.append(F.name, state.name); body.append(F.kelas, state.kelas || "-");
+      body.append(F.score, String(score)); body.append(F.note, notes());
+      fetch(F.base + "formResponse", { method: "POST", mode: "no-cors", body: body }).catch(function () { state.sent = 0; save(); });
+    } catch (e) {}
+  }
+  function result() {
+    var score = total(state.ans), card = el("div", "card");
+    send(score);
+    card.appendChild(el("span", "label", state.name + (state.kelas ? " · " + state.kelas : "")));
+    var s = el("p", "score", String(score)); s.appendChild(el("small", null, " / " + QS.length)); card.appendChild(s);
+    if (state.kicked) card.appendChild(el("p", "err", "The quiz ended because you left the page " + MAXLEFT + " times. Your answers were sent as they were."));
+    if (state.timeUp) card.appendChild(el("p", "err", "Time ran out. Your answers were sent as they were."));
+    var box = el("div", "send");
+    if (C.preview) {
+      box.appendChild(el("h3", null, "Preview: nothing was sent"));
+      box.appendChild(el("p", "sub", "In the real quiz this note goes to your form: " + notes().split(" || ")[0]));
+    } else if (F) {
+      box.appendChild(el("h3", null, "Your score has been sent to your teacher"));
+      box.appendChild(el("p", "sub", "You do not need to do anything. If you were offline when you finished, use the button below."));
+      var form = el("a", "btn ghost", "Send again with the form");
+      form.id = "form-link"; form.target = "_blank"; form.rel = "noopener";
+      form.href = F.base + "viewform?usp=pp_url&" + F.name + "=" + encodeURIComponent(state.name) + "&" + F.kelas + "=" +
+        encodeURIComponent(state.kelas || "-") + "&" + F.score + "=" + score + "&" + F.note + "=" + encodeURIComponent(notes());
+      var fn = el("div", "nav"); fn.appendChild(form); box.appendChild(fn);
+    }
+    card.appendChild(box);
+    var comps = Object.keys(COMP).filter(function (c) { return QS.some(function (q) { return q.comp === c; }); });
+    if (comps.length) {
+      card.appendChild(el("h3", null, "By competency"));
+      var rows = el("div", "rows");
+      comps.forEach(function (c) {
+        var mine = QS.filter(function (q) { return q.comp === c; });
+        var got = mine.filter(function (q) { return correct(q, state.ans[q.n - 1]); }).length;
+        var r = el("div", "row"); r.appendChild(el("span", null, COMP[c])); r.appendChild(el("span", null, got + " / " + mine.length));
+        rows.appendChild(r);
+      });
+      card.appendChild(rows);
+    }
+    if (C.showAnswers) {
+      card.appendChild(el("h3", null, "Answers and explanations"));
+      seen().forEach(function (sn) {
+        var q = sn.q, a = state.ans[q.n - 1], ok = correct(q, a), item = el("div", "item");
+        item.appendChild(el("span", "label", "No. " + sn.num + " · Part " + (sn.page + 1) + (COMP[q.comp] ? " · " + COMP[q.comp] : "")));
+        item.appendChild(el("p", "q", q.stem));
+        if (q.kind === "cat") q.items.forEach(function (it, k) { item.appendChild(el("p", "why", (k + 1) + ". " + it.s)); });
+        var mine = el("p");
+        mine.appendChild(el("span", "tag " + (ok ? "ok" : "no"), ok ? "Correct: " : "Your answer: "));
+        mine.appendChild(document.createTextNode(show(q, a))); item.appendChild(mine);
+        if (!ok) {
+          var k2 = el("p"); k2.appendChild(el("span", "tag ok", "Answer: "));
+          k2.appendChild(document.createTextNode(show(q, key(q)))); item.appendChild(k2);
+        }
+        if (q.why) item.appendChild(el("p", "why", q.why));
+        card.appendChild(item);
+      });
+    } else card.appendChild(el("p", "sub", "Your teacher will go through the answers with you."));
+    var nav = el("div", "nav");
+    nav.appendChild(button("btn ghost", "Try again (your teacher will see it is try " + (state.attempt + 1) + ")", "again-btn", function () {
+      var n = state.name, k = state.kelas, a = state.attempt + 1;
+      state = fresh(a); state.name = n; state.kelas = k;
+      go(-1);
+    }));
+    card.appendChild(nav); stage.appendChild(card);
+  }
+
+  /* ---------- teacher ---------- */
+  function teacher() {
+    var card = el("div", "card");
+    card.appendChild(el("h2", null, "Teacher view"));
+    card.appendChild(el("p", "sub", "Copy the whole note column from your form's response sheet and paste it here to see which questions each student missed. Question numbers follow the order you wrote them, not each student's shuffled order. Only results from this quiz are read."));
+    var box = el("textarea"); box.id = "teacher-paste"; box.rows = 7; card.appendChild(box);
+    var out = el("div", "rows"); out.id = "teacher-out";
+    var nav = el("div", "nav");
+    nav.appendChild(button("btn", "Read results", "read-btn", function () { table(parse(box.value), out); }));
+    nav.appendChild(button("btn ghost", "Back to the quiz", "quiz-btn", function () { state = fresh(1); load(); render(); }));
+    card.appendChild(nav); card.appendChild(out); stage.appendChild(card);
+  }
+  function table(rows, out) {
+    out.textContent = "";
+    if (!rows.length) { out.appendChild(el("p", "err", "No result codes for this quiz found in the pasted text.")); return; }
+    rows.sort(function (a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
+    out.appendChild(el("p", "sub", rows.length + " result" + (rows.length > 1 ? "s" : "") + ". ✓ right, ✗ wrong."));
+    var wrap = el("div", "scroll"), tb = el("table"), hr = el("tr");
+    ["Name", "Class", "Try", "Score"].forEach(function (h, i) { hr.appendChild(el("th", i < 2 ? "l" : null, h)); });
+    QS.forEach(function (q) { hr.appendChild(el("th", null, String(q.n))); });
+    hr.appendChild(el("th", null, "Code")); tb.appendChild(hr);
+    var miss = QS.map(function () { return 0; });
+    rows.forEach(function (r) {
+      var tr = el("tr");
+      tr.appendChild(el("td", "l", r.name)); tr.appendChild(el("td", "l", r.kelas));
+      tr.appendChild(el("td", null, String(r.attempt))); tr.appendChild(el("td", null, r.score + "/" + QS.length));
+      QS.forEach(function (q, i) { var ok = r.marks[i]; if (!ok) miss[i]++; tr.appendChild(el("td", ok ? "y" : "x", ok ? "✓" : "✗")); });
+      tr.appendChild(el("td", r.valid ? "y" : "x", r.valid ? "OK" : "Edited")); tb.appendChild(tr);
+    });
+    var fr = el("tr"), lab = el("td", "l", "Students who missed it"); lab.colSpan = 4; fr.appendChild(lab);
+    miss.forEach(function (m) { fr.appendChild(el("td", null, String(m))); }); fr.appendChild(el("td")); tb.appendChild(fr);
+    wrap.appendChild(tb); out.appendChild(wrap);
+  }
+
+  if (!C.preview) load();
+  if (location.hash === "#teacher") state.page = "teacher";
+  comeBack();
+  render();
+})();
+</script>
+</body>
+</html>
